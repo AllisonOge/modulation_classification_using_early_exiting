@@ -9,6 +9,8 @@ from model_builder.core import (
     EarlyStoppingCallback,
 )
 
+from model_builder.core.metrics import multiclass_accuracy
+
 
 class Scheduler:
     cosine = "cosine"
@@ -18,12 +20,13 @@ class Scheduler:
 
 
 class Handler:
-    def __init__(self, net, crit, nepochs, opt=None, sch=None, modelPath='./models/', modelName='eeHandler'):
+    def __init__(self, net, nepochs, crit, metrics=[multiclass_accuracy], opt=None, sch=None, modelPath='./models/', modelName='eeHandler'):
         self.net = net
+        self.nepochs = nepochs
         self.crit = crit
+        self.metrics = metrics
         self.opt = opt
         self.sch = sch
-        self.nepochs = nepochs
         self.modelPath = modelPath
         self.modelName = modelName
 
@@ -32,23 +35,24 @@ class Handler:
         else:
             assert self.sch in Scheduler.__dict__.values()
 
-    def _create_callbacks(self, learner):
+    def _create_callbacks(self, learner, metric_name):
         return [
-            SaveModelCallback(learner, monitor='accuracy'),
+            SaveModelCallback(learner, monitor=metric_name,
+                              name=self.modelName),
             TerminateOnNaNCallback(),
-            ReduceLROnPlateauCallback(learner, monitor='accuracy'),
-            EarlyStoppingCallback(learner, monitor='accuracy')
+            ReduceLROnPlateauCallback(learner, monitor=metric_name),
+            EarlyStoppingCallback(learner, monitor=metric_name, patience=10)
         ]
 
-    def train(self, trainds, valds, bs, val_bs=None, device=None, lr=1e-3, wd=1e-8):
+    def train(self, trainds, valds, bs, val_bs=None, device=None, lr=1e-3, wd=1e-8, metric_name="multiclass_accuracy"):
         dls = DataLoaders.create(
             train_ds=trainds, valid_ds=valds, bs=bs, val_bs=val_bs, device=device)
-        self.learner = Learner(dls, self.net, opt_func=self.opt, loss_func=self.crit) if self.opt else Learner(
-            dls, self.net, loss_func=self.crit)
+        self.learner = Learner(dls, self.net, opt_func=self.opt, loss_func=self.crit, metrics=self.metrics, model_dir=self.modelPath) if self.opt else Learner(
+            dls, self.net, loss_func=self.crit, metrics=self.metrics, model_dir=self.modelPath)
         # augment the data using mixup
         self.learner = self.learner.mixup()
 
-        cbs = self._create_callbacks(self.learner)
+        cbs = self._create_callbacks(self.learner, metric_name)
 
         # fit the model
         if self.sch == Scheduler.cosine:
@@ -66,12 +70,16 @@ class Handler:
         print('\n\nTraining completed\n\n')
 
         # validate the model
-        val_loss, accuracy = self.learner.validate()
-        print(f'Validation loss: {val_loss:.5f}, Accuracy: {accuracy:.3f}')
+        val_loss, metrics = self.learner.validate()
+        metrics = [metrics] if not isinstance(metrics, list) else metrics
+        fmt = ','.join([f'{" ".join(list(map(lambda s: s.capitalize(), name.split("_"))))}: {metric:.3f}' for name, metric in zip(
+            self.learner.recorder.metrics_names, metrics)])
+        print(
+            f'Validation Loss: {val_loss:.5f}', fmt)
 
         # save the model
-        saved_model = self.learner.save_checkpoint(
-            Path(self.modelPath)/self.modelName)
+        Path.mkdir(Path(self.modelPath), exist_ok=True)
+        saved_model = self.learner.save_checkpoint(self.modelName)
         print(f'Model saved at: {saved_model}')
 
     def infer(self):
