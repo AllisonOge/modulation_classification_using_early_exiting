@@ -560,4 +560,4 @@ class eeModel_V3(eeModel):
         
         return X1, X2
     
-"""
+"""  # noqa

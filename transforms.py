@@ -45,7 +45,7 @@ class TimeReversal:
         return torch.flip(x, [self.dim])
 
 
-class TimeCrop:
+class RandomTimeCrop:
     """
     Crop the time axis of the input tensor.
 
@@ -153,6 +153,38 @@ class RandomAmplitudeScale:
 
     def __call__(self, x):
         return x * (1 + torch.rand(1) * self.scale_factor)
+
+
+class Resample:
+    """
+    Resample the input tensor by a factor.
+
+    :param rate: Resampling rate (up/down sampling).
+    :type rate: float
+    :param dim: Dimension along which to resample.
+    :type dim: int (default = -1)
+
+    Example:
+        >>> x = torch.linspace(1, 51, 50)
+        >>> y = torch.exp(1j * -x**2/6.0)
+        >>> y = torch.stack((y.real, y.imag), dim=-1)
+        >>> transform = Resample(rate=0.1)
+        >>> y_transformed = transform(y)
+        >>> y.shape, y_transformed.shape
+        (torch.Size([50, 2]), torch.Size([74, 2]))
+    """
+
+    def __init__(self, rate, dim=-1):
+        self.rate = rate
+        self.dim = dim
+
+    def __call__(self, x: torch.Tensor):
+        down = x.size(self.dim)
+        up = int(down * self.rate)
+        # upsample -> filter -> downsample
+        poly_filt = signal.resample_poly(x, up, down, axis=self.dim,
+                                         window=('kaiser', 7.0))
+        return torch.from_numpy(poly_filt)
 
 
 class RandomResample:
