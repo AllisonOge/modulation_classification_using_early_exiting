@@ -162,7 +162,10 @@ class blModel(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.MaxPool1d(kernel_size=2, stride=2, padding=0),
-            nn.Flatten(),
+            nn.Flatten()
+        )
+
+        self.head = nn.Sequential(
             nn.Linear(in_features=256, out_features=256),
             nn.Dropout(0.5),
             nn.Linear(in_features=256, out_features=64),
@@ -173,6 +176,7 @@ class blModel(nn.Module):
     def forward(self, X):
         X = self.baseModel(X)
         X = self.longBranch(X)
+        X = self.head(X)
         return X
 
 
