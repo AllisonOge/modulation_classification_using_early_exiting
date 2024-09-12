@@ -11,8 +11,7 @@ from .rrc_helper import apply_matched_rrc_filter
 # Binary source to generate uniform i.i.d. bits
 binary_source = sn.utils.BinarySource()
 # rrc filter params
-samples_per_symbol = 16
-span_in_symbols = 8
+span_in_symbols = 11
 beta = 0.5
 
 # QPSK (4-QAM) Constellation
@@ -28,13 +27,13 @@ demapper = sn.mapping.Demapper("app", constellation=constellation)
 awgn_channel = sn.channel.AWGN()
 
 
-def generate_qpsk_signal(batch_size, num_symbols, ebno_db=None):
+def generate_qpsk_signal(batch_size, samples_per_symbol, num_symbols=16, ebno_db=None):
     bits = binary_source(
         [batch_size, num_symbols * bits_per_symbol])  # block length
-    return modulate_qpsk_signal(bits, ebno_db)
+    return modulate_qpsk_signal(bits, samples_per_symbol, ebno_db)
 
 
-def modulate_qpsk_signal(msg_bits, ebno_db=None):
+def modulate_qpsk_signal(msg_bits, samples_per_symbol, ebno_db=None):
     x = mapper(msg_bits)
     us = sn.signal.Upsampling(samples_per_symbol)
     x_us = us(x)
@@ -53,7 +52,7 @@ def modulate_qpsk_signal(msg_bits, ebno_db=None):
     return y, msg_bits
 
 
-def demodulate_qpsk_signal(sig, no=1e-4, soft=False):
+def demodulate_qpsk_signal(sig, samples_per_symbol, no=1e-4, soft=False):
     x_matched = apply_matched_rrc_filter(
         sig, span_in_symbols, samples_per_symbol, beta)
     num_symbols = sig.shape[-1] // samples_per_symbol

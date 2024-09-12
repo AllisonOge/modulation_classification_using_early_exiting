@@ -67,8 +67,8 @@ def modulate_ofdm_signal(msg_bits, resource_grid, ebno_db=None):
     return y, msg_bits
 
 
-def generate_ofdm_signal(batch_size, num_ofdm_symbols, ebno_db=None):
-    resource_grid = create_resource_grid(num_ofdm_symbols)
+def generate_ofdm_signal(batch_size, num_symbols, ebno_db=None):
+    resource_grid = create_resource_grid(num_symbols)
 
     # Number of coded bits in a resource grid
     num_coded_bits = int(resource_grid.num_data_symbols * bits_per_symbol)
