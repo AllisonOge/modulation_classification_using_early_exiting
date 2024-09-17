@@ -21,7 +21,9 @@ class blHandler:
             *list(blModel(feature_dim=feature_dim).children())[:-1])
         assert os.path.isfile(
             saved_model_path), f"Model path {saved_model_path} does not exist"
-        self.backbone.load_state_dict(torch.load(saved_model_path))
+        self.backbone.load_state_dict(torch.load(
+            saved_model_path, weights_only=True))
+        print(f"Model loaded from {saved_model_path}")
         self.device = device if device else "cuda" if torch.cuda.is_available() else "cpu"
         # freeze the backbone
         for param in self.backbone.parameters():
@@ -35,7 +37,7 @@ class blHandler:
         self.criterion = criterion
         self.metrics = metrics or []
 
-        self.tracker = Tracker(monitor=monitor)
+        self.tracker = Tracker(metric_name=monitor)
 
     def get_optimizer(self):
         return self.optimizer
@@ -45,7 +47,7 @@ class blHandler:
         Save the model checkpoint
         """
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        new_metric = history.get(self.tracker.monitor, [None])[-1]
+        new_metric = history.get(self.tracker.metric_name, [None])[-1]
         if new_metric is None:
             return
         if self.tracker.operator(new_metric, self.tracker.best):
@@ -60,14 +62,16 @@ class blHandler:
     def print_history(self, history):
         stats = []
         for key, value in history.items():
+            if len(value) == 0:
+                continue
             if key != "epochs":
                 stats.append(f"{key}: {value[-1]:.4f}")
-        print(f"Epoch {history['epochs'][-1]}", ", ".join(stats))
+        print(f"Epoch :{history['epochs'][-1]},", ", ".join(stats))
 
     def plot_history(self, history, keys=None, names=None):
         fig = plt.figure(figsize=(12, 8))
         keys = keys or history.keys()
-        names = names or [k.replace('_', ' ').upper() for k in keys]
+        names = names or [k.replace('_', ' ').capitalize() for k in keys]
 
         assert len(keys) == len(
             names), "Keys and Names should be of same length"
@@ -122,7 +126,7 @@ class blHandler:
             history["val_loss"].append(running_vloss)
 
             last_lr = torch.tensor([param_group['lr']
-                                    for param_group in self.model.param_groups]).mean().item()
+                                    for param_group in self.optimizer.param_groups]).mean().item()
             history['learning_rate'].append(last_lr)
 
             if scheduler:

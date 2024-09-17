@@ -281,17 +281,15 @@ class blHandler:
         for key, value in history.items():
             if len(value) == 0:
                 continue
-            key = key.replace('_', ' ').upper()
-            fmt = f"{key}: {value[-1]}" if key.startswith(
-                'EPOCHS') else f"{key}: {value[-1]:.4f}"
-            stats.insert(
-                0, fmt) if key.startswith('EPOCHS') else stats.append(fmt)
-        print(", ".join(stats))
+            if key != 'epochs':
+                stats.append(f"{key}: {value[-1]:.4f}")
+        print(f'Epochs: {history["epochs"][-1]},', ", ".join(stats))
 
     def plot_history(self, history, keys=None, names=None):
         fig = plt.figure(figsize=(12, 8))
         keys = keys or history.keys()
-        names = names or [k.replace('_', ' ').upper() for k in keys]
+        names = names or [k.replace('_', ' ').capitalize().replace(
+            'Ssl', 'SSL') for k in keys]
 
         assert len(keys) == len(
             names), "Keys and Names should be of same length"
