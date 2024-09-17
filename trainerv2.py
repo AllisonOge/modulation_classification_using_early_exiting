@@ -6,6 +6,7 @@ from model_builder.core import (
     SaveModelCallback,
     TerminateOnNaNCallback,
     ReduceLROnPlateauCallback,
+    EarlyStoppingCallback,
 )
 
 from model_builder.core.metrics import multiclass_accuracy
@@ -39,7 +40,9 @@ class Handler:
             SaveModelCallback(learner, monitor=metric_name,
                               name=self.modelName),
             TerminateOnNaNCallback(),
-            ReduceLROnPlateauCallback(learner, monitor=metric_name),
+            ReduceLROnPlateauCallback(
+                learner, monitor=metric_name, patience=10),
+            EarlyStoppingCallback(learner, monitor=metric_name, patience=10)
         ]
 
     def train(self, trainds, valds, bs, val_bs=None, device=None, lr=1e-3, wd=1e-8, metric_name="multiclass_accuracy"):

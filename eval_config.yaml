@@ -1,0 +1,207 @@
+experiment:
+  name: "Model Comparison"
+  date: ${datetime}
+
+models:
+  - name: "byolModel"
+    type: "CNN"
+    architecture:
+      base_model:
+        layers:
+          - type: "Conv1D"
+            in_channels: 2
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+
+      long_branch:
+        layers:
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 32
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 32
+          - type: "ReLU"
+            inplace: true
+          - type: "Conv1D"
+            in_channels: 32
+            out_channels: 32
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 32
+          - type: "ReLU"
+            inplace: true
+          - type: "Conv1D"
+            in_channels: 32
+            out_channels: 16
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 16
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Flatten"
+
+      head:
+        layers:
+          - type: "Linear"
+            in_features: 256
+            out_features: 256
+          - type: "Dropout"
+            probability: 0.5
+          - type: "Linear"
+            in_features: 256
+            out_features: 64
+          - type: "Dropout"
+            probability: 0.5
+          - type: "Linear"
+            in_features: 64
+            out_features: 10  # Adjusted for num_classes
+    output_path: "./Models/best_bl_0502.pth"
+
+  - name: "denoiserModel"
+    type: "CNN"
+    architecture:
+      layers:
+        - type: "Conv2D"
+          filters: 64
+          kernel_size: 3
+        - type: "MaxPooling2D"
+          pool_size: 2
+        - type: "Dense"
+          units: 256
+          activation: "relu"
+    output_path: "/path/to/my_model2_output"
+
+baseline: # in the long run, the baseline model is the early exiting model but now it is the supervised model
+  model:
+    name: "blModel"
+    type: "CNN"
+    input_dim: 2
+    num_classes: 10
+    architecture:
+      base_model:
+        layers:
+          - type: "Conv1D"
+            in_channels: 2
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 64
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 64
+          - type: "ReLU"
+            inplace: true
+
+      long_branch:
+        layers:
+          - type: "Conv1D"
+            in_channels: 64
+            out_channels: 32
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 32
+          - type: "ReLU"
+            inplace: true
+          - type: "Conv1D"
+            in_channels: 32
+            out_channels: 32
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 32
+          - type: "ReLU"
+            inplace: true
+          - type: "Conv1D"
+            in_channels: 32
+            out_channels: 16
+            kernel_size: 3
+            padding: 1
+          - type: "BatchNorm1D"
+            num_features: 16
+          - type: "ReLU"
+            inplace: true
+          - type: "MaxPool1D"
+            kernel_size: 2
+            stride: 2
+          - type: "Flatten"
+
+      head:
+        layers:
+          - type: "Linear"
+            in_features: 256
+            out_features: 256
+          - type: "Dropout"
+            probability: 0.5
+          - type: "Linear"
+            in_features: 256
+            out_features: 64
+          - type: "Dropout"
+            probability: 0.5
+          - type: "Linear"
+            in_features: 64
+            out_features: 10  # Adjusted for num_classes
+    output_path: "./Models/best_bl_0502.pth"
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score

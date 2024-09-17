@@ -83,7 +83,7 @@ class Tracker:
             'min': np.less,
             'max': np.greater
         }
-        self.operator = self.mode_dict.get(self.mode, 'auto')
+        self.operator = self.mode_dict.get(self.mode, self.mode_dict['auto'])
 
         self._best = float(
             'inf') if self.operator == np.less else float('-inf')
@@ -128,13 +128,19 @@ class blHandler:
 
         self.tracker = Tracker(monitor)
 
+    def get_optimizer(self):
+        """
+        Get the optimizer for the model
+        """
+        return self.byol_optimizer
+
     def get_metric(self, history, metric):
         """
         Get the metric from the history
         """
-        return history.get(metric, [None])[0]
+        return history.get(metric, [None])[-1]
 
-    def save_checkpoint(self, history, path='./Models/bl_model_byol.pth', with_opt=False):
+    def save_checkpoint(self, history, path='./Models/blModel_byol.pth', with_opt=False):
         """
         Save the model checkpoint
         """
@@ -150,7 +156,7 @@ class blHandler:
             print(
                 f"Model saved with {self.tracker.metric_name}: {new_metric} to {path}")
 
-    def load_checkpoint(self, path='./Models/bl_model_byol.pth', with_opt=False):
+    def load_checkpoint(self, path='./Models/blModel_byol.pth', with_opt=False):
         """
         Load the model checkpoint
         """
@@ -290,13 +296,20 @@ class blHandler:
         assert len(keys) == len(
             names), "Keys and Names should be of same length"
 
-        ax = fig.add_subplot(111)
+        ax = fig.add_subplot(211)
         for key, name in zip(keys, names):
-            if len(history[key]) == 0 or key == 'epochs':
+            if len(history[key]) == 0 or key == 'epochs' or key == 'learning_rate':
                 continue
-            ax.plot(history['epochs'], history[key], 'o-.', label=name)
+            ax.plot(history['epochs'], history[key], label=name)
         ax.legend()
         ax.grid()
+
+        ax = fig.add_subplot(212)
+        ax.plot(history['epochs'], history['learning_rate'],
+                label='Learning Rate')
+        ax.legend()
+        ax.grid()
+
         fig.savefig('./stats_byol.png', dpi=300)
 
     def simclr_train(self, **kwargs):

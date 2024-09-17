@@ -20,6 +20,8 @@ import transforms as RST
 
 from lightly.transforms.byol_transform import BYOLTransform
 
+SEED = 203045
+
 
 def loadRML22(filepath):
     """
@@ -31,20 +33,24 @@ def loadRML22(filepath):
     snrs = [item[1] for item in Xd.keys()]
     X = []
     y = []
+    SNRS = []
     name2label = {k: v for v, k in enumerate(sorted(set(mods)))}
     for mod, snr in zip(mods, snrs):
         b = Xd[(mod, snr)]
         X.append(b)
         y.extend([name2label[mod], ] * b.shape[0])
+        SNRS.extend([snr, ] * b.shape[0])
     X = np.vstack(X)
     y = np.array(y)
-    return X, y
+    SNRS = np.array(SNRS)
+    return X, y, SNRS
 
 
 class IQDataset:
-    def __init__(self, x, y, transform_x=None, transform_y=None):
+    def __init__(self, x, y, snrs, transform_x=None, transform_y=None):
         self.x = x
         self.y = y
+        self.snrs = snrs
         self.transform_x = transform_x
         self.transform_y = transform_y
 
@@ -64,11 +70,15 @@ class IQDataset:
             y = torch.from_numpy(y)
         return x, y
 
+    def get_snrs(self):
+        return self.snrs
+
 
 class BYOLRData:
-    def __init__(self, X, y, nsplits=2, test_size=0.4, batch_size=64, num_workers=4):
+    def __init__(self, X, y, snrs, nsplits=2, test_size=0.4, batch_size=64, num_workers=4):
         self.X = X
         self.y = y
+        self.snrs = snrs
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -96,11 +106,14 @@ class BYOLRData:
         )
 
     def get_datasets(self, signal_length=128):
+        torch.random.manual_seed(SEED)  # for reproducibility
         dev_idxs, val_idxs = next(self.sss.split(self.X, self.y))
         byol_dataset = IQDataset(
-            self.X[dev_idxs], self.y[dev_idxs], transform_x=self.get_transforms(signal_length))
-        train_dataset = IQDataset(self.X[dev_idxs], self.y[dev_idxs])
-        val_dataset = IQDataset(self.X[val_idxs], self.y[val_idxs])
+            self.X[dev_idxs], self.y[dev_idxs], self.snrs[dev_idxs], transform_x=self.get_transforms(signal_length))
+        train_dataset = IQDataset(
+            self.X[dev_idxs], self.y[dev_idxs], self.snrs[dev_idxs])
+        val_dataset = IQDataset(
+            self.X[val_idxs], self.y[val_idxs], self.snrs[val_idxs])
 
         return byol_dataset, train_dataset, val_dataset
 

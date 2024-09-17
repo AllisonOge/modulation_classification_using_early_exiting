@@ -1,24 +1,29 @@
 """
-Train a model using SSL techniques
+Finetune a model head on a downstream task
 """
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from getModel import blModel, eeModel_V0, eeModel_V1, eeModel_V2, eeModel_V3
-from sslTrainer import blHandler, eeHandler
-from sslGetData import loadRML22, BYOLRData, SimCLRData, MoCoV3Data, DINOData
+from sslFineTuner import blHandler
+from sslGetData import loadRML22, IQDataset
+from sklearn.model_selection import StratifiedShuffleSplit
 import functools
 import argparse
 
 parser = argparse.ArgumentParser(
-    description='Train a model using SSL techniques')
+    description='Finetune a model head on a downstream task')
 # parser.add_argument('--model', type=str,
 #                     choices=["bl", "eeV0", "eeV1", "eeV2", "eeV3"], default='bl', help='Model to train')
-# parser.add_argument('--ssl', type=str, choices=[
-#                     "byol", "simclr", "mocov3", "dino"], default='byol', help='SSL technique to use')
-parser.add_argument('--data', type=str, default='./Data/RML22.pickle.01A',
+parser.add_argument('--data', type=str, default='./Data/RML22_ValDataset.pickle.16S',
                     help='Path to the data file')
-parser.add_argument('--epochs', type=int, default=100,
+parser.add_argument('--split_ratio', type=float, default=0.2,
+                    help='Ratio to split the dataset')
+parser.add_argument('--num_workers', type=int, default=4,
+                    help='Number of workers to use for data loading')
+parser.add_argument('--saved_model_path', type=str, default='./Models/byolModel_byol.pth',
+                    help='Path to the saved model')
+parser.add_argument('--feature_dim', type=int, default=256,
+                    help='Feature dimension of the model')
+parser.add_argument('--epochs', type=int, default=30,
                     help='Number of epochs to train')
 parser.add_argument('--batch_size', type=int, default=256,
                     help='Batch size for training')
@@ -48,8 +53,7 @@ args = parser.parse_args()
 
 
 def main():
-    # train bl model on RML22 dataset using byol technique and expand the training script to include other techniques
-
+    # finetune the blModel on the downstream task, later expand to other models
     opt_name = args.opt.lower()
     if opt_name.startswith("sgd"):
         optimizer = functools.partial(torch.optim.SGD,
@@ -67,22 +71,11 @@ def main():
     else:
         raise NotImplementedError
 
-    backbone = nn.Sequential(*list(blModel().children())[:-1])
-    classifier = nn.Sequential(*list(blModel().children())[-1])
-    classifier_optimizer = torch.optim.Adam(
-        classifier.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
-    def loss_fn(x0: torch.Tensor, x1: torch.Tensor):
-        return 2. - 2. * F.cosine_similarity(x0, x1, dim=-1).mean()
-
     trainer = blHandler(
-        backbone=backbone,
-        feature_dim=256,
-        criterion=loss_fn,
-        ssl_optimizer=optimizer,
-        classifier=classifier,
-        classifier_optimizer=classifier_optimizer,
-        classifier_crit=F.cross_entropy,
+        saved_model_path=args.saved_model_path,
+        feature_dim=args.feature_dim,
+        optimizer=optimizer,
+        criterion=F.cross_entropy,
     )
 
     optimizer = trainer.get_optimizer()
@@ -121,17 +114,19 @@ def main():
     # get the dataloaders
     X, y, snrs = loadRML22(args.data)
 
-    byol_data = BYOLRData(X, y, snrs, nsplits=2, test_size=0.4,
-                          batch_size=args.batch_size, num_workers=4)
+    sss = StratifiedShuffleSplit(
+        n_splits=2, test_size=args.split_ratio, random_state=0)
+    train_index, val_index = next(sss.split(X, y))
+    train_ds = IQDataset(X[train_index], y[train_index], snrs[train_index])
+    val_ds = IQDataset(X[val_index], y[val_index], snrs[val_index])
 
-    signal_length = X.shape[2]
+    train_dataloader = torch.utils.data.DataLoader(
+        train_ds, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    val_dataloader = torch.utils.data.DataLoader(
+        val_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
-    ssl_dataloader, train_dataloader, val_dataloader = byol_data.get_dataloaders(
-        signal_length)
-
-    history = trainer.byol_train(
+    history = trainer.train(
         args.epochs,
-        ssl_dataloader,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         scheduler=lr_scheduler

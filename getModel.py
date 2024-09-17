@@ -119,7 +119,7 @@ class eeModel(nn.Module):
 
 class blModel(nn.Module):
 
-    def __init__(self, num_classes=10, input_dim=2):
+    def __init__(self, input_dim=2, feature_dim=256, num_classes=10):
         super(blModel, self).__init__()
 
         self.baseModel = nn.Sequential(
@@ -165,9 +165,9 @@ class blModel(nn.Module):
         )
 
         self.head = nn.Sequential(
-            nn.Linear(in_features=256, out_features=256),
+            nn.Linear(in_features=feature_dim, out_features=feature_dim),
             nn.Dropout(0.5),
-            nn.Linear(in_features=256, out_features=64),
+            nn.Linear(in_features=feature_dim, out_features=64),
             nn.Dropout(0.5),
             nn.Linear(in_features=64, out_features=num_classes)
         )
