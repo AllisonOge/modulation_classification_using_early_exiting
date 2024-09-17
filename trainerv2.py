@@ -1,5 +1,6 @@
 # uses ria hub model builder package
 from pathlib import Path
+import torch
 from model_builder.core import (
     Learner,
     DataLoaders,
@@ -41,8 +42,8 @@ class Handler:
                               name=self.modelName),
             TerminateOnNaNCallback(),
             ReduceLROnPlateauCallback(
-                learner, monitor=metric_name, patience=10),
-            EarlyStoppingCallback(learner, monitor=metric_name, patience=10)
+                learner, monitor=metric_name, patience=20),
+            EarlyStoppingCallback(learner, monitor=metric_name, patience=20)
         ]
 
     def train(self, trainds, valds, bs, val_bs=None, device=None, lr=1e-3, wd=1e-8, metric_name="multiclass_accuracy"):
@@ -80,7 +81,9 @@ class Handler:
 
         # save the model
         Path.mkdir(Path(self.modelPath), exist_ok=True)
-        saved_model = self.learner.save_checkpoint(self.modelName)
+        saved_model = Path(self.modelPath) / self.modelName
+        torch.save(self.learner.model.state_dict(),
+                   saved_model.with_suffix('.pth'))
         print(f'Model saved at: {saved_model}')
 
     def infer(self):

@@ -32,7 +32,8 @@ class blHandler:
         self.head = nn.Sequential(
             *list(blModel(feature_dim=feature_dim).children())[-1])
 
-        self.model = nn.Sequential(self.backbone, self.head).to(self.device)
+        self.model = nn.Sequential(
+            *self.backbone.children(), self.head).to(self.device)
         self.optimizer = optimizer(params=self.model.parameters())
         self.criterion = criterion
         self.metrics = metrics or []

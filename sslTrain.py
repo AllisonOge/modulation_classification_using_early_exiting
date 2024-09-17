@@ -24,7 +24,7 @@ parser.add_argument('--batch_size', type=int, default=256,
                     help='Batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3,
                     help='Learning rate for training')
-parser.add_argument('--weight_decay', type=float, default=1e-8,
+parser.add_argument('--weight_decay', type=float, default=1e-4,
                     help='Weight decay for training')
 parser.add_argument('--lr_warmup_epochs', type=int, default=10,
                     help='Number of warmup epochs')

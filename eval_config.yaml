@@ -4,14 +4,14 @@ models:
     in_dim: 2
     feature_dim: 256
     num_classes: 10
-    output_path: "./Models/best_bl_0502.pth"
+    output_path: "./Models/blModel_100.pt"
 
   - name: "byolModel"
     type: "bl" # variants are: bl, eev0, eev1, eev2, eev3
     in_dim: 2
     feature_dim: 256
     num_classes: 10
-    output_path: "./Models/fineTunedModel_30.pth"
+    output_path: "./Models/fineTunedModel_50.pth"
 
   # - name: "byoleeModel"
   #   in_dim: 2

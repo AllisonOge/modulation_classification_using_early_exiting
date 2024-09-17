@@ -2,6 +2,7 @@
 Evaluate models against baseline model
 """
 import torch
+import torch.nn as nn
 import argparse
 import yaml
 from torch.utils.data import DataLoader
@@ -38,9 +39,16 @@ def build_models_from_config(config_path):
         feature_dim = model.get('feature_dim')
 
         if model.get('type') == 'bl':
-            model_dict[model_name] = blModel(
-                input_dim=in_dim, feature_dim=feature_dim)
-            # .load_state_dict(torch.load(model.get('output_path'), weights_only=True)) # TODO: Load the model weights
+            try:
+                model_dict[model_name] = blModel(
+                    input_dim=in_dim, feature_dim=feature_dim)
+                model_dict[model_name].load_state_dict(
+                    torch.load(model.get('output_path'), weights_only=True))
+            except Exception:
+                model_dict[model_name] = nn.Sequential(*list(blModel(
+                    input_dim=in_dim, feature_dim=feature_dim).children()))
+                model_dict[model_name].load_state_dict(
+                    torch.load(model.get('output_path'), weights_only=True))
         elif model.get('type') == 'eev2':
             raise NotImplementedError
 
@@ -68,7 +76,7 @@ def main():
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(111)
     for acc, model_name in zip(accuracies, args.models):
-        ax.plot(acc.keys(), acc.values(), 'o', label=model_name)
+        ax.plot(acc.keys(), acc.values(), 'o-', label=model_name)
     ax.set_xlabel('SNR')
     ax.set_ylabel('Accuracy')
     ax.legend()

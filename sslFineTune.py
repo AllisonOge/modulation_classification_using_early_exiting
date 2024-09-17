@@ -19,7 +19,7 @@ parser.add_argument('--split_ratio', type=float, default=0.2,
                     help='Ratio to split the dataset')
 parser.add_argument('--num_workers', type=int, default=4,
                     help='Number of workers to use for data loading')
-parser.add_argument('--saved_model_path', type=str, default='./Models/byolModel_byol.pth',
+parser.add_argument('--saved_model_path', type=str, default='./Models/blModel_byol.pth',
                     help='Path to the saved model')
 parser.add_argument('--feature_dim', type=int, default=256,
                     help='Feature dimension of the model')
